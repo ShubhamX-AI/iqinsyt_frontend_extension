@@ -1,75 +1,204 @@
-# React + TypeScript + Vite
+# IQinsyt Frontend Extension
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Chrome Extension (Manifest V3) frontend for IQinsyt.  
+This repository is intentionally structured around extension runtime boundaries:
 
-Currently, two official plugins are available:
+- `sidepanel` for React UI rendering.
+- `background` for privileged extension logic and API orchestration.
+- `content` for page-level detection and message emission.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+That split is important because Chrome Extension contexts have different capabilities and lifecycle rules.
 
-## React Compiler
+## What This Project Does
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+IQinsyt provides a side panel experience that can detect relevant events from host pages and later fetch neutral research insights from backend APIs.
 
-Note: This will impact Vite dev & build performances.
+Current repository status is scaffold-first:
 
-## Expanding the ESLint configuration
+- Extension build pipeline is wired.
+- Entry points for side panel/background/content exist.
+- Later phases add shared types, auth/api logic, detection logic, hooks, and full UI.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Why This Structure
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Manifest V3 requires a service worker background process instead of persistent background pages.
+- Content scripts run inside webpages and should stay focused on DOM/event detection.
+- Side panel React UI should remain decoupled from content script internals via message passing.
+- This separation makes permissions, debugging, and testing clearer and safer.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Quick Start
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prerequisites
+
+- Node.js 20+ recommended.
+- `pnpm` installed globally.
+
+### Install
+
+```bash
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm dev
 ```
+
+### Build
+
+```bash
+pnpm build
+```
+
+### Type Check
+
+```bash
+pnpm -s tsc --noEmit
+```
+
+### Load in Chrome
+
+1. Run `pnpm build`.
+2. Open `chrome://extensions`.
+3. Enable Developer mode.
+4. Click "Load unpacked".
+5. Select this repo's `dist/` folder.
+
+## Repository Map (Every Current File/Folder)
+
+All paths below reflect the current repository contents.
+
+### Visual Structure (Tree)
+
+```text
+iqinsyt_frontend_extension/
+├── .agents/                 # Local agent/skill config
+├── .claude/                 # Local assistant metadata
+├── .codex                   # Codex environment marker/config artifact
+├── .git/                    # Git metadata
+├── .gitignore               # Git ignore rules
+├── README.md                # Project documentation (this file)
+├── architecture.md          # Full architecture reference
+├── dist/                    # Build output (generated)
+├── eslint.config.js         # ESLint configuration
+├── manifest.json            # Manifest V3 contract
+├── node_modules/            # Installed dependencies (generated)
+├── package-lock.json        # npm lockfile
+├── package.json             # Scripts and dependencies
+├── phases.md                # Phased implementation plan
+├── pnpm-lock.yaml           # pnpm lockfile
+├── public/
+│   ├── favicon.svg          # Static asset
+│   └── icons.svg            # Static asset
+├── src/
+│   ├── background/
+│   │   └── index.ts         # Background service worker entrypoint
+│   ├── content/
+│   │   ├── detector.ts      # Event detection module (placeholder)
+│   │   └── index.ts         # Content script entrypoint
+│   ├── sidepanel/
+│   │   ├── App.tsx          # Root React component
+│   │   ├── index.html       # Side panel HTML shell
+│   │   └── main.tsx         # React bootstrap entrypoint
+│   └── index.css            # Global styles/tokens
+├── tsconfig.app.json        # TS config for app/browser code
+├── tsconfig.json            # Root TS config
+├── tsconfig.node.json       # TS config for Node/tooling code
+└── vite.config.ts           # Vite + CRX build config
+```
+
+| Path | Type | Why It Exists |
+|---|---|---|
+| `.agents/` | Dir | Local agent/skill configuration used by coding assistants in this workspace. Not runtime app code. |
+| `.claude/` | Dir | Local assistant metadata/workflow files. Tooling support only. |
+| `.codex` | File | Local marker/config artifact for Codex environment integration. |
+| `.git/` | Dir | Git metadata and version history. |
+| `.gitignore` | File | Defines files/folders that should not be committed (build artifacts, dependencies, etc.). |
+| `README.md` | File | Canonical project documentation and onboarding guide. |
+| `architecture.md` | File | Full product and system architecture reference for extension behavior and constraints. |
+| `dist/` | Dir (generated) | Build output for loading as unpacked extension in Chrome. Generated by `pnpm build`. |
+| `eslint.config.js` | File | ESLint configuration for static analysis and code quality enforcement. |
+| `manifest.json` | File | Manifest V3 extension contract: permissions, entrypoints, content scripts, side panel path. |
+| `node_modules/` | Dir (generated) | Installed dependencies. |
+| `package-lock.json` | File | npm lockfile for deterministic installs when using npm. |
+| `package.json` | File | Project metadata, scripts, dependencies, and devDependencies. |
+| `phases.md` | File | Phase-by-phase implementation plan used to build incrementally. |
+| `pnpm-lock.yaml` | File | pnpm lockfile for deterministic installs with pnpm. |
+| `public/` | Dir | Static assets copied into build output. |
+| `public/favicon.svg` | File | Browser/extension icon asset used by build outputs and UI entry HTML. |
+| `public/icons.svg` | File | Additional static icon asset bundle used by UI or branding. |
+| `src/` | Dir | All source code for side panel UI, background worker, and content script. |
+| `tsconfig.app.json` | File | TypeScript compiler settings for browser/app code under `src/`. |
+| `tsconfig.json` | File | Root TypeScript project references/coordination file. |
+| `tsconfig.node.json` | File | TypeScript settings for Node-side tooling/config files (for example Vite config typing). |
+| `vite.config.ts` | File | Vite bundler config plus CRX plugin integration for extension packaging. |
+
+## Source Map (`src/`)
+
+### Visual Structure (`src/`)
+
+```text
+src/
+├── background/
+│   └── index.ts
+├── content/
+│   ├── detector.ts
+│   └── index.ts
+├── sidepanel/
+│   ├── App.tsx
+│   ├── index.html
+│   └── main.tsx
+└── index.css
+```
+
+| Path | Type | Why It Exists |
+|---|---|---|
+| `src/background/` | Dir | Background service worker code. Centralized privileged extension logic lives here. |
+| `src/background/index.ts` | File | Service worker entrypoint scaffold. Later phases route and handle Chrome runtime messages here. |
+| `src/content/` | Dir | Content-script layer for webpage context interaction. |
+| `src/content/index.ts` | File | Content script entrypoint scaffold, loaded by manifest on matched pages. |
+| `src/content/detector.ts` | File | Detection module placeholder. Intended home for DOM heuristics and event extraction logic. |
+| `src/sidepanel/` | Dir | React application for Chrome side panel UI. |
+| `src/sidepanel/index.html` | File | Side panel HTML shell with root mount node and module script entry. |
+| `src/sidepanel/main.tsx` | File | React mount/bootstrap entrypoint for side panel app. |
+| `src/sidepanel/App.tsx` | File | Top-level side panel component scaffold. |
+| `src/index.css` | File | Global CSS variables/base styles shared by side panel UI entrypoint. |
+
+## Build and Runtime Architecture
+
+### Build Layer
+
+- Vite handles TS/React bundling.
+- `@crxjs/vite-plugin` transforms extension entrypoints and generates the final extension manifest in `dist/`.
+- CRX pipeline rewrites some output paths to built assets, so `dist/` file names differ from source names.
+
+### Runtime Layer
+
+- `manifest.json` declares extension permissions and execution surfaces.
+- `background` service worker handles privileged and long-lived orchestration.
+- `content script` runs in matching webpages for detection.
+- `side panel` is the user-facing React interface.
+
+## Why Manifest and Entrypoints Are Set This Way
+
+- `manifest_version: 3` is mandatory for modern Chrome extensions.
+- `background.service_worker` points to a TS entry that CRX builds into a worker loader/output.
+- `content_scripts` declares the page-injected script entry.
+- `side_panel.default_path` points to the side panel HTML entry.
+- Keeping explicit entrypoints per context avoids cross-context coupling and makes permissions auditable.
+
+## Development Principles for This Repo
+
+- Keep side effects in the correct extension context.
+- Keep shared contracts in dedicated type modules as phases progress.
+- Prefer message-based communication over direct context coupling.
+- Treat `architecture.md` as product behavior reference and `phases.md` as implementation sequence.
+
+## Current Phase Baseline
+
+As of now, the repository has baseline scaffolding for early phases:
+
+- Build infrastructure is present.
+- Folder and entrypoint skeleton is present.
+- Advanced runtime logic and shared type layers are still pending implementation in upcoming phases.
