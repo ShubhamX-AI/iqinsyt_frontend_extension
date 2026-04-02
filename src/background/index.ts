@@ -1,6 +1,8 @@
 import { fetchInsight, AuthError, SubscriptionError } from '../api/client.ts'
 import type { ExtensionMessage, DetectedEvent } from '../shared/types.ts'
 
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+
 chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   switch (message.type) {
     case 'EVENT_DETECTED':
