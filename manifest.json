@@ -62,5 +62,27 @@
 
   "action": {
     "default_title": "Open IQinsyt"
-  }
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["src/sidepanel/index.html"],
+      "matches": [
+        "https://polymarket.com/*",
+        "https://*.polymarket.com/*",
+        "https://kalshi.com/*",
+        "https://*.kalshi.com/*",
+        "https://metaculus.com/*",
+        "https://*.metaculus.com/*",
+        "https://manifold.markets/*",
+        "https://*.manifold.markets/*",
+        "https://predictit.org/*",
+        "https://*.predictit.org/*",
+        "https://betfair.com/*",
+        "https://*.betfair.com/*",
+        "https://smarkets.com/*",
+        "https://*.smarkets.com/*"
+      ]
+    }
+  ]
 }

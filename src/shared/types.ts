@@ -11,7 +11,9 @@ export type MessageType =
   | 'START_PICKER'     // side panel → background → content script
   | 'PICKER_CANCELLED' // content script → background → side panel
   | 'REQUEST_SITE_AUTH_STATUS' // side panel → background
-  | 'SITE_AUTH_STATUS'; // background → side panel
+  | 'SITE_AUTH_STATUS' // background → side panel
+  | 'TOGGLE_FLOATING_PANEL' // background → content script
+  | 'CLOSE_PANEL'; // side panel → background → content script
 
 export interface ExtensionMessage {
   type: MessageType;

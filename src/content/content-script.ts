@@ -1,5 +1,10 @@
 import { detectKalshiDetail } from './sites/kalshi/autoDetect.ts'
 import { activatePicker } from './picker.ts'
+import { injectFloatingWidget, collapseFloatingPanel, togglePanel } from './floatingWidget.ts'
+
+// ─── Floating widget (all supported sites) ──────────────────────────────────
+
+injectFloatingWidget();
 
 // ─── Auto-detect on Kalshi detail pages ──────────────────────────────────────
 
@@ -23,7 +28,7 @@ if (window.location.hostname === 'kalshi.com') {
   }).observe(document, { subtree: true, childList: true });
 }
 
-// ─── Manual picker ───────────────────────────────────────────────────────────
+// ─── Manual picker & messaging ───────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendResponse) => {
   if (message.type === 'PING_CONTENT_SCRIPT') {
@@ -32,6 +37,11 @@ chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendRe
   }
 
   if (message.type === 'START_PICKER') {
+    collapseFloatingPanel();
     activatePicker();
+  }
+
+  if (message.type === 'TOGGLE_FLOATING_PANEL') {
+    togglePanel();
   }
 });

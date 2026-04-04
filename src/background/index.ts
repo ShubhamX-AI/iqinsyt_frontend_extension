@@ -1,7 +1,12 @@
 import { fetchInsight, AuthError, SubscriptionError } from '../api/client.ts'
 import type { ExtensionMessage, DetectedEvent } from '../shared/types.ts'
 
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+// Toggle the floating panel when the toolbar icon is clicked
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.id != null) {
+    chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_FLOATING_PANEL' }).catch(() => {});
+  }
+});
 
 chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   switch (message.type) {
@@ -37,6 +42,15 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
 
     case 'REQUEST_ANALYSIS':
       handleAnalysis(message.payload as DetectedEvent);
+      break;
+
+    case 'CLOSE_PANEL':
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tabId = tabs[0]?.id;
+        if (tabId != null) {
+          chrome.tabs.sendMessage(tabId, { type: 'TOGGLE_FLOATING_PANEL' }).catch(() => {});
+        }
+      });
       break;
   }
 });

@@ -1,4 +1,5 @@
 import { parseKalshiListingTile, parseKalshiDetailPage } from './sites/kalshi/parseMarket.ts'
+import { expandFloatingPanel } from './floatingWidget.ts'
 import type { DetectedMarket } from '../shared/types.ts'
 
 const HIGHLIGHT_ATTR = 'data-iq-highlight';
@@ -29,6 +30,7 @@ function deactivatePicker(): void {
   document.removeEventListener('keydown', handleKeyDown, { capture: true });
   clearHighlight();
   removeStyle();
+  expandFloatingPanel();
 }
 
 function handleMouseOver(e: MouseEvent): void {

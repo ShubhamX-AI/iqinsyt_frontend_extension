@@ -148,9 +148,13 @@ function PanelContent() {
     dispatch({ type: 'DISMISS_ERROR' });
   }
 
+  function handleClosePanel() {
+    chrome.runtime.sendMessage({ type: 'CLOSE_PANEL' }).catch(() => {});
+  }
+
   return (
     <div className="iq-panel">
-      <StatusBar />
+      <StatusBar onClose={handleClosePanel} />
       <div className="iq-content">
 
         {phase === 'idle' && (
