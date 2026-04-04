@@ -3,6 +3,14 @@ import type { DetectedMarket, DetectedOutcome } from '../../../shared/types.ts'
 const PCT_REGEX = /\b\d{1,3}(?:\.\d+)?%\b/;
 const VOLUME_REGEX = /\$[\d,]+(?:\.\d+)?[kmb]?\b/i;
 
+// ─── Public API ────────────────────────────────────────────────────────────────
+
+/** Find a Kalshi market element for picker highlighting. Returns null if not on Kalshi or no match. */
+export function findKalshiCandidate(el: HTMLElement): HTMLElement | null {
+  return findKalshiTile(el) ?? findKalshiDetailContainer(el);
+}
+
+/** Parse a clicked element as a Kalshi listing tile. Returns null if not a tile. */
 export function parseKalshiListingTile(el: HTMLElement): DetectedMarket | null {
   const tile = el.closest('[data-testid="market-tile"]') ??
                el.querySelector('[data-testid="market-tile"]') ??
@@ -12,6 +20,7 @@ export function parseKalshiListingTile(el: HTMLElement): DetectedMarket | null {
   return parseTile(tile);
 }
 
+/** Parse a clicked element as a Kalshi detail page. Returns null if not a detail page. */
 export function parseKalshiDetailPage(el: HTMLElement): DetectedMarket | null {
   const h1 = document.querySelector('h1');
   const title = h1?.textContent?.trim();
@@ -24,10 +33,64 @@ export function parseKalshiDetailPage(el: HTMLElement): DetectedMarket | null {
   if (!outcomes.length) return null;
 
   const volume = extractVolume(container.innerText ?? '');
-  const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64);
+  const id = buildId(title);
 
   return { id, title, source: 'kalshi.com', url: window.location.href, outcomes, volume };
 }
+
+/** Auto-detect a Kalshi detail page market without user interaction. */
+export function detectKalshiDetail(): DetectedMarket | null {
+  if (window.location.hostname !== 'kalshi.com') return null;
+
+  const title = extractPageTitle();
+  if (!title) return null;
+
+  const outcomes = extractPageOutcomes();
+  if (!outcomes.length) return null;
+
+  const volume = extractVolume(document.body?.innerText ?? '');
+  const id = buildId(title);
+
+  return { id, title, source: 'kalshi.com', url: window.location.href, outcomes, volume };
+}
+
+// ─── Finding Helpers (for picker highlighting) ─────────────────────────────────
+
+function findKalshiTile(el: HTMLElement): HTMLElement | null {
+  if (el.getAttribute('data-testid') === 'market-tile') return el;
+  const parent = el.closest('[data-testid="market-tile"]');
+  if (parent) return parent as HTMLElement;
+  const child = el.querySelector('[data-testid="market-tile"]');
+  if (child) return child as HTMLElement;
+  return null;
+}
+
+function findKalshiDetailContainer(el: HTMLElement): HTMLElement | null {
+  if (window.location.hostname !== 'kalshi.com') return null;
+
+  for (const box of document.querySelectorAll('div[class*="box-border"][class*="overflow-hidden"]')) {
+    if (countOutcomeHeaders(box as HTMLElement) >= 2) return box as HTMLElement;
+  }
+
+  let cur: HTMLElement | null = el;
+  while (cur && cur !== document.body) {
+    if (countOutcomeHeaders(cur) >= 2) return cur;
+    cur = cur.parentElement;
+  }
+
+  return null;
+}
+
+function countOutcomeHeaders(container: Element): number {
+  let count = 0;
+  container.querySelectorAll('h2.typ-headline-x10').forEach(h => {
+    const t = h.textContent?.trim() ?? '';
+    if (/\d+%/.test(t) || /<1%/.test(t)) count++;
+  });
+  return count;
+}
+
+// ─── Parsing Helpers ───────────────────────────────────────────────────────────
 
 function parseTile(tile: Element): DetectedMarket | null {
   const titleEl = tile.querySelector('h2');
@@ -38,7 +101,7 @@ function parseTile(tile: Element): DetectedMarket | null {
   if (!outcomes.length) return null;
 
   const volume = extractVolume((tile as HTMLElement).innerText ?? '');
-  const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64);
+  const id = buildId(title);
 
   return { id, title, source: 'kalshi.com', url: window.location.href, outcomes, volume };
 }
@@ -67,6 +130,78 @@ function extractTileOutcomes(tile: Element): DetectedOutcome[] {
 
   tile.querySelectorAll('[data-iq-parsed]').forEach(e => e.removeAttribute('data-iq-parsed'));
   return outcomes.slice(0, 10);
+}
+
+function extractDetailOutcomes(container: HTMLElement): DetectedOutcome[] {
+  const outcomes: DetectedOutcome[] = [];
+  const seen = new Set<string>();
+
+  for (const row of container.querySelectorAll('div[class*="box-border"][class*="overflow-hidden"]')) {
+    const el = row as HTMLElement;
+    const pctHeader = el.querySelector('h2.typ-headline-x10');
+    if (!pctHeader) continue;
+
+    const pctText = pctHeader.textContent?.trim() ?? '';
+    const probability = parseProbability(pctText);
+    if (!probability) continue;
+
+    const label = extractLabel(el, pctText);
+    if (!label || !isValidLabel(label)) continue;
+
+    const key = `${label}|${probability}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      outcomes.push({ label, probability });
+    }
+  }
+
+  return outcomes.slice(0, 10);
+}
+
+function extractPageTitle(): string | null {
+  const h1 = document.querySelector('h1');
+  const text = h1?.textContent?.trim();
+  return text && text.length >= 5 ? text : null;
+}
+
+function extractPageOutcomes(): DetectedOutcome[] {
+  const outcomes: DetectedOutcome[] = [];
+  const seen = new Set<string>();
+
+  for (const row of document.querySelectorAll('div[class*="box-border"][class*="overflow-hidden"]')) {
+    const el = row as HTMLElement;
+    const pctHeader = el.querySelector('h2.typ-headline-x10');
+    if (!pctHeader) continue;
+
+    const pctText = pctHeader.textContent?.trim() ?? '';
+    const probability = parseProbability(pctText);
+    if (!probability) continue;
+
+    const label = extractLabel(el, pctText);
+    if (!label || !isValidLabel(label)) continue;
+
+    const key = `${label}|${probability}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      outcomes.push({ label, probability });
+    }
+  }
+
+  return outcomes.slice(0, 10);
+}
+
+function findOutcomesContainer(el: HTMLElement): HTMLElement | null {
+  for (const box of document.querySelectorAll('div[class*="box-border"][class*="overflow-hidden"]')) {
+    if (countOutcomeHeaders(box as HTMLElement) >= 2) return box as HTMLElement;
+  }
+
+  let cur: HTMLElement | null = el;
+  while (cur && cur !== document.body) {
+    if (countOutcomeHeaders(cur) >= 2) return cur;
+    cur = cur.parentElement;
+  }
+
+  return null;
 }
 
 function findOutcomeRow(el: Element): Element | null {
@@ -110,69 +245,37 @@ function findProbability(row: Element): string | null {
   return null;
 }
 
-function findOutcomesContainer(el: HTMLElement): HTMLElement | null {
-  for (const box of document.querySelectorAll('div[class*="box-border"][class*="overflow-hidden"]')) {
-    const boxEl = box as HTMLElement;
-    let count = 0;
-    boxEl.querySelectorAll('h2.typ-headline-x10').forEach(h => {
-      const t = h.textContent?.trim() ?? '';
-      if (/\d+%/.test(t) || /<1%/.test(t)) count++;
-    });
-    if (count >= 2) return boxEl;
-  }
+function extractLabel(row: HTMLElement, pctText: string): string | null {
+  const labelSpan = row.querySelector('span.typ-body-x30');
+  const text = labelSpan?.textContent?.trim();
+  if (text && text.length >= 2 && text !== pctText) return text;
 
-  let cur: HTMLElement | null = el;
-  while (cur && cur !== document.body) {
-    let count = 0;
-    cur.querySelectorAll('h2.typ-headline-x10').forEach(h => {
-      const t = h.textContent?.trim() ?? '';
-      if (/\d+%/.test(t) || /<1%/.test(t)) count++;
-    });
-    if (count >= 2) return cur;
-    cur = cur.parentElement;
+  for (const span of row.querySelectorAll('span')) {
+    const t = span.textContent?.trim();
+    if (!t || t === pctText) continue;
+    if (PCT_REGEX.test(t) || /^\d+$/.test(t)) continue;
+    if (t.length < 2 || t.length > 100) continue;
+    if (/buy yes|sell no|amount|sign up|vol\b|loading/i.test(t)) continue;
+    return t;
   }
 
   return null;
 }
 
-function extractDetailOutcomes(container: HTMLElement): DetectedOutcome[] {
-  const outcomes: DetectedOutcome[] = [];
-  const seen = new Set<string>();
+function parseProbability(text: string): string | null {
+  const match = text.match(/(\d+)%/);
+  if (match) return `${match[1]}%`;
+  if (text.includes('<1%')) return '0%';
+  return null;
+}
 
-  for (const row of container.querySelectorAll('div[class*="box-border"][class*="overflow-hidden"]')) {
-    const el = row as HTMLElement;
-    const pctHeader = el.querySelector('h2.typ-headline-x10');
-    if (!pctHeader) continue;
+function extractVolume(text: string): string | null {
+  const match = text.match(VOLUME_REGEX);
+  return match?.[0] ?? null;
+}
 
-    const pctText = pctHeader.textContent?.trim() ?? '';
-    const match = pctText.match(/(\d+)%/);
-    const probability = match ? `${match[1]}%` : pctText.includes('<1%') ? '0%' : null;
-    if (!probability) continue;
-
-    const labelSpan = el.querySelector('span.typ-body-x30');
-    let label = labelSpan?.textContent?.trim() ?? null;
-
-    if (!label) {
-      for (const span of el.querySelectorAll('span')) {
-        const t = span.textContent?.trim();
-        if (!t || t === pctText || PCT_REGEX.test(t) || /^\d+$/.test(t)) continue;
-        if (t.length < 2 || t.length > 100) continue;
-        if (/buy yes|sell no|amount|sign up|vol\b|loading/i.test(t)) continue;
-        label = t;
-        break;
-      }
-    }
-
-    if (!label || !isValidLabel(label)) continue;
-
-    const key = `${label}|${probability}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      outcomes.push({ label, probability });
-    }
-  }
-
-  return outcomes.slice(0, 10);
+function buildId(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64);
 }
 
 function isValidLabel(label: string): boolean {
@@ -182,9 +285,4 @@ function isValidLabel(label: string): boolean {
   if (/\$[\d,]+/.test(label)) return false;
   if (/\bvol\b|\bvolume\b/i.test(label)) return false;
   return true;
-}
-
-function extractVolume(text: string): string | null {
-  const match = text.match(VOLUME_REGEX);
-  return match?.[0] ?? null;
 }

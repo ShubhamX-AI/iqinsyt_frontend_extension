@@ -1,4 +1,4 @@
-import { detectKalshiDetail } from './sites/kalshi/autoDetect.ts'
+import { detectKalshiDetail } from './sites/kalshi/parseMarket.ts'
 import { activatePicker } from './picker.ts'
 import { injectFloatingWidget, collapseFloatingPanel, togglePanel } from './floatingWidget.ts'
 

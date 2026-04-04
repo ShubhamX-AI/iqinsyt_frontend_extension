@@ -1,4 +1,4 @@
-import { parseKalshiListingTile, parseKalshiDetailPage } from './sites/kalshi/parseMarket.ts'
+import { findKalshiCandidate, parseKalshiListingTile, parseKalshiDetailPage } from './sites/kalshi/parseMarket.ts'
 import { expandFloatingPanel } from './floatingWidget.ts'
 import type { DetectedMarket } from '../shared/types.ts'
 
@@ -90,47 +90,13 @@ function handleKeyDown(e: KeyboardEvent): void {
 // ─── Candidate Detection ─────────────────────────────────────────────────────
 
 function findCandidate(el: HTMLElement): HTMLElement | null {
-  // Kalshi listing tile
-  const tile = findKalshiTile(el);
-  if (tile) { logDebug('Found Kalshi listing tile'); return tile; }
-
-  // Kalshi detail container
-  const detail = findKalshiDetailContainer(el);
-  if (detail) { logDebug('Found Kalshi detail container'); return detail; }
-
-  // Generic fallback
+  const kalshi = findKalshiCandidate(el);
+  if (kalshi) { logDebug('Found Kalshi element'); return kalshi; }
   return findGenericCandidate(el);
 }
 
 function parseCandidate(el: HTMLElement): DetectedMarket | null {
   return parseKalshiListingTile(el) ?? parseKalshiDetailPage(el) ?? null;
-}
-
-// ─── Kalshi Helpers ──────────────────────────────────────────────────────────
-
-function findKalshiTile(el: HTMLElement): HTMLElement | null {
-  if (el.getAttribute('data-testid') === 'market-tile') return el;
-  const parent = el.closest('[data-testid="market-tile"]');
-  if (parent) return parent as HTMLElement;
-  const child = el.querySelector('[data-testid="market-tile"]');
-  if (child) return child as HTMLElement;
-  return null;
-}
-
-function findKalshiDetailContainer(el: HTMLElement): HTMLElement | null {
-  if (window.location.hostname !== 'kalshi.com') return null;
-
-  let cur: HTMLElement | null = el;
-  while (cur && cur !== document.body) {
-    let count = 0;
-    cur.querySelectorAll('h2.typ-headline-x10').forEach(h => {
-      const t = h.textContent?.trim() ?? '';
-      if (/\d+%/.test(t) || /<1%/.test(t)) count++;
-    });
-    if (count >= 2) return cur;
-    cur = cur.parentElement;
-  }
-  return null;
 }
 
 // ─── Generic Fallback ────────────────────────────────────────────────────────
