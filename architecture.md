@@ -116,11 +116,11 @@ iqinsyt-extension/
 │   │
 │   ├── content/
 │   │   ├── content-script.ts    # Content script entrypoint — auto-detect on Kalshi + picker + PING handler
+│   │   ├── floatingWidget.ts    # Floating panel DOM, styles, open/close toggle
 │   │   ├── picker.ts            # Interactive element picker (hover highlight → click → parse)
 │   │   └── sites/
 │   │       └── kalshi/
-│   │           ├── autoDetect.ts       # Auto-detect market on Kalshi detail pages
-│   │           └── parseMarket.ts      # Parse Kalshi listing tiles and detail pages
+│   │           └── parseMarket.ts      # Kalshi DOM finding + parsing (single source of truth)
 │   │
 │   ├── sidepanel/
 │   │   ├── main.tsx             # React bootstrap entrypoint
@@ -331,7 +331,7 @@ On `kalshi.com` detail pages, the content script auto-detects the market without
 
 // Runs on initial load and on SPA navigation
 function tryAutoDetect(): void {
-  const market = detectKalshiDetailPage();
+  const market = detectKalshiDetail();
   if (market) {
     chrome.runtime.sendMessage({ type: 'MARKETS_DETECTED', payload: [market] });
   }
@@ -349,10 +349,10 @@ if (window.location.hostname === 'kalshi.com') {
 }
 ```
 
-The `detectKalshiDetailPage()` function in `parseElementText.ts` looks for:
+The `detectKalshiDetail()` function in `sites/kalshi/parseMarket.ts` looks for:
 - An `<h1>` element with the market title (min 5 chars)
 - Outcome rows with percentage headers (`h2.typ-headline-x10` containing `\d+%`)
-- Volume information from `[class*="typ-body-x20"]` elements
+- Volume information from page text
 
 **Mode 2 — Interactive Element Picker (user-triggered)**
 
@@ -372,7 +372,7 @@ The picker workflow:
 1. Side panel dispatches `START_PICKING` → background → content script
 2. Content script calls `activatePicker()` — adds `mouseover`, `click`, `keydown` listeners
 3. On `mouseover`: walks up DOM tree to find market container, highlights with purple outline (`#aa3bff`)
-4. On `click`: parses the selected element via `parseElementText()`, sends `MARKETS_DETECTED` with payload
+4. On `click`: parses the selected element via `parseKalshiListingTile()` / `parseKalshiDetailPage()` from `sites/kalshi/parseMarket.ts`, sends `MARKETS_DETECTED` with payload
 5. On `Escape`: deactivates picker, sends `PICKER_CANCELLED`
 
 The picker includes a debug mode (`Ctrl+Shift+D`) that logs parsing details to console.
@@ -435,7 +435,8 @@ type MessageType =
   | 'DETECTION_FAILED'      // background → side panel (trigger manual input)
   | 'AUTH_REQUIRED'         // background → side panel
   | 'START_PICKER'          // side panel → background → content script
-  | 'PICKER_CANCELLED';     // content script → background → side panel
+  | 'PICKER_CANCELLED'    // content script → background → side panel
+  | 'CLOSE_PANEL';        // side panel → background → content script (close floating panel)
 
 interface ExtensionMessage {
   type: MessageType;

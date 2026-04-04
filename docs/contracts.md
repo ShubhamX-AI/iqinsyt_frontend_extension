@@ -13,6 +13,10 @@ Defined in `src/shared/types.ts`.
 - `AUTH_REQUIRED`: no payload
 - `START_PICKER`: no payload
 - `PICKER_CANCELLED`: no payload
+- `CLOSE_PANEL`: no payload (side panel → background → content script, closes floating panel)
+- `REQUEST_SITE_AUTH_STATUS`: no payload (side panel → background)
+- `SITE_AUTH_STATUS`: `payload` is `boolean` (background → side panel)
+- `TOGGLE_FLOATING_PANEL`: no payload (background → content script)
 
 Notes:
 
@@ -64,7 +68,7 @@ Defined in `src/api/types.ts` and consumed by `src/api/client.ts`.
   - other non-2xx -> `ApiError`
 - `fetchInsight()` sets 12s timeout.
 - Picker candidate selection uses ancestor scoring plus market indicators (percentages/outcome-like text).
-- `parseElementText()` requires non-empty text, a valid title, and at least one parsed outcome.
+- `parseKalshiListingTile()` / `parseKalshiDetailPage()` require non-empty text, a valid title, and at least one parsed outcome.
 - Picker emits `DETECTION_FAILED` when no candidate is found or parsing fails.
 - Background maps errors to UI-safe messages/events:
   - `AuthError` -> `AUTH_REQUIRED`

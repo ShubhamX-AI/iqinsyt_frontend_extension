@@ -17,7 +17,7 @@ sequenceDiagram
   BG->>Content: START_PICKER (active tab)
   Content->>Page: Inject picker style + attach capture listeners
   User->>Page: Hover and click market-like element
-  Content->>Content: parseElementText(candidate)
+  Content->>Content: findKalshiCandidate() + parseKalshiListingTile()/parseKalshiDetailPage()
   Content->>BG: MARKETS_DETECTED [market]
   BG->>Panel: MARKETS_DETECTED
   Panel->>Panel: phase = detected, detectedEvent = markets[0]
@@ -36,7 +36,7 @@ sequenceDiagram
   participant BG as Background Worker
   participant Panel as Side Panel UI
 
-  Content->>Content: No candidate OR parseElementText returns null
+  Content->>Content: No candidate OR parseKalshiListingTile/parseKalshiDetailPage returns null
   Content->>BG: DETECTION_FAILED
   Panel->>Panel: phase = manual
   Panel->>BG: REQUEST_ANALYSIS (manual event)
@@ -89,12 +89,28 @@ sequenceDiagram
   end
 ```
 
+## Kalshi Auto-Detect Path
+
+```mermaid
+sequenceDiagram
+  participant Page as Kalshi Detail Page
+  participant Content as Content Script
+  participant BG as Background Worker
+  participant Panel as Side Panel UI
+
+  Page->>Content: Page loads (kalshi.com detail URL)
+  Content->>Content: detectKalshiDetail() after 1.5s
+  Content->>BG: MARKETS_DETECTED [market] (if found)
+  BG->>Panel: MARKETS_DETECTED
+  Panel->>Panel: phase = detected, detectedEvent = markets[0]
+```
+
 ## Checks and Guards in Flow
 
 - Event text is sanitized before request (`<...>` tags stripped, trimmed, max 500 chars).
 - Picker click interception uses capture phase and prevents default page click action while active.
-- Candidate lookup climbs ancestors and scores market-like containers using `%` patterns and text heuristics.
-- `parseElementText()` requires a valid title and at least one parsed outcome before emitting `MARKETS_DETECTED`.
+- Candidate lookup uses site-specific finders (`findKalshiCandidate`) with generic scoring fallback.
+- `parseKalshiListingTile()` / `parseKalshiDetailPage()` require a valid title and at least one parsed outcome before emitting `MARKETS_DETECTED`.
 - JWT expiry is checked before each authed request; refresh is attempted if near expiry (`< 60s`).
 - Request timeout is enforced (`AbortSignal.timeout(12_000)`).
 - UI receives normalized message types, not raw exceptions.

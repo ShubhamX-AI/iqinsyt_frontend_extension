@@ -46,9 +46,10 @@ Checks:
 
 ## Message Handling Debug Path
 
-- Content script message entry: `src/content/content-script.ts`
+- Content script entry + auto-detect: `src/content/content-script.ts`
+- Floating widget panel: `src/content/floatingWidget.ts`
 - Picker orchestration and candidate matching: `src/content/picker.ts`
-- Element text parser: `src/content/parseElementText.ts`
+- Kalshi DOM finding + parsing (single source): `src/content/sites/kalshi/parseMarket.ts`
 - Background relay/orchestration: `src/background/index.ts`
 - Side panel listeners: `src/hooks/useEventDetection.ts`, `src/hooks/useInsightQuery.ts`
 - Reducer transitions: `src/sidepanel/App.tsx`

@@ -132,8 +132,11 @@ iqinsyt_frontend_extension/
 │   │   └── index.ts         # Background message router + API bridge
 │   ├── content/
 │   │   ├── content-script.ts # Content script entrypoint
-│   │   ├── parseElementText.ts # Extract detected market data from selected element text
-│   │   └── picker.ts        # Interactive element picker (highlight/click/cancel)
+│   │   ├── floatingWidget.ts # Floating panel open/close + tab UI
+│   │   ├── picker.ts        # Interactive element picker (highlight/click/cancel)
+│   │   └── sites/
+│   │       └── kalshi/
+│   │           └── parseMarket.ts # Kalshi DOM finding + parsing (single source of truth)
 │   ├── assets/              # Reserved local asset folder (currently empty)
 │   ├── components/
 │   │   ├── ErrorState.tsx   # Error state UI block
@@ -224,8 +227,11 @@ src/
 │   └── index.ts
 ├── content/
 │   ├── content-script.ts
-│   ├── parseElementText.ts
-│   └── picker.ts
+│   ├── floatingWidget.ts
+│   ├── picker.ts
+│   └── sites/
+│       └── kalshi/
+│           └── parseMarket.ts
 ├── components/
 │   ├── ErrorState.tsx
 │   ├── EventCard.tsx
@@ -258,9 +264,10 @@ src/
 | `src/background/` | Dir | Background service worker code. Centralized privileged extension logic lives here. |
 | `src/background/index.ts` | File | Background service worker routing layer: relays detection and triggers analysis fetch flow. |
 | `src/content/` | Dir | Content-script layer for webpage context interaction. |
-| `src/content/content-script.ts` | File | Content script entrypoint that listens for `START_PICKER` and activates page picking. |
-| `src/content/picker.ts` | File | Interactive picker that highlights candidates, handles click/cancel, and emits detection messages. |
-| `src/content/parseElementText.ts` | File | Parses selected element text into a `DetectedMarket` payload (`title`, `outcomes`, `volume`, `source`, `url`). |
+| `src/content/content-script.ts` | File | Content script entrypoint — auto-detect on Kalshi + picker activation + PING handler. |
+| `src/content/floatingWidget.ts` | File | Floating panel DOM, styles, open/close toggle, and tab UI. |
+| `src/content/picker.ts` | File | Interactive picker that highlights candidates, handles click/cancel, and emits detection messages. Delegates Kalshi logic to `sites/kalshi/parseMarket.ts`. |
+| `src/content/sites/kalshi/parseMarket.ts` | File | Single source of truth for all Kalshi DOM logic: finding candidates for highlighting, parsing listing tiles and detail pages, and auto-detecting market data on detail pages. |
 | `src/components/` | Dir | Side panel presentation layer for status, selected event, manual input, output, and errors. |
 | `src/components/StatusBar.tsx` | File | Header/status component reflecting current phase and loading indicator. |
 | `src/components/EventCard.tsx` | File | Event summary card with action button to trigger analysis. |
@@ -319,7 +326,7 @@ As of now, Phases 1 through 9 are implemented in the repository:
 - Folder and entrypoint skeleton is present.
 - Shared API and cross-context type contracts are present (`src/api/types.ts`, `src/shared/types.ts`).
 - Auth/token manager and API client modules are present (`src/auth/tokenManager.ts`, `src/api/client.ts`).
-- Background message routing and picker logic are present (`src/background/index.ts`, `src/content/content-script.ts`, `src/content/picker.ts`, `src/content/parseElementText.ts`) with `MARKETS_DETECTED` relay support.
+- Background message routing and picker logic are present (`src/background/index.ts`, `src/content/content-script.ts`, `src/content/picker.ts`, `src/content/sites/kalshi/parseMarket.ts`) with `MARKETS_DETECTED` relay support.
 - Reducer/context state foundation is present (`src/sidepanel/App.tsx`, `src/sidepanel/context.tsx`).
 - Hook modules are present (`src/hooks/useAuth.ts`, `src/hooks/useEventDetection.ts`, `src/hooks/useInsightQuery.ts`).
 - UI component modules are present (`src/components/StatusBar.tsx`, `src/components/EventCard.tsx`, `src/components/ManualInput.tsx`, `src/components/SectionBlock.tsx`, `src/components/ResearchOutput.tsx`, `src/components/ErrorState.tsx`).

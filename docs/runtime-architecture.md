@@ -4,7 +4,7 @@
 
 The extension runs in three isolated contexts, each with separate capabilities.
 
-- `content` (`src/content/content-script.ts`, `src/content/picker.ts`, `src/content/parseElementText.ts`): handles interactive element picking, parses selected DOM text into a market payload, emits detection messages.
+- `content` (`src/content/content-script.ts`, `src/content/picker.ts`, `src/content/floatingWidget.ts`, `src/content/sites/kalshi/parseMarket.ts`): handles interactive element picking, auto-detect on Kalshi pages, parses selected DOM into a market payload, emits detection messages.
 - `background` (`src/background/index.ts`): service worker that routes messages and performs privileged API orchestration.
 - `sidepanel` (`src/sidepanel/*`): React UI state machine and rendering layer.
 
@@ -19,10 +19,12 @@ This separation is required by Manifest V3 and is also the reason all communicat
 ## Responsibility Split
 
 - Content script:
+  - Inject and manage the floating widget panel (open/close/tab).
+  - Auto-detect market data on Kalshi detail pages via SPA route observer.
   - Wait for `START_PICKER` and activate an interactive picker on the current page.
   - Highlight candidate elements under the cursor using capture-phase listeners.
-  - Resolve a candidate container via ancestor scoring/market-indicator heuristics.
-  - Parse the selected candidate into one `DetectedMarket` via `parseElementText`.
+  - Resolve a candidate container via site-specific or generic scoring heuristics.
+  - Parse the selected candidate into one `DetectedMarket` via `sites/kalshi/parseMarket.ts`.
   - Emit `MARKETS_DETECTED` (single-item array), `DETECTION_FAILED`, or `PICKER_CANCELLED`.
 - Background service worker:
   - Enable open-on-action side panel behavior.
