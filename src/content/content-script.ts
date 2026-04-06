@@ -1,4 +1,4 @@
-import { detectKalshiDetail } from './sites/kalshi/parseMarket.ts'
+import { detectKalshiDetail, detectKalshiSlides } from './sites/kalshi/parseMarket.ts'
 import { activatePicker } from './picker.ts'
 import { injectFloatingWidget, collapseFloatingPanel, togglePanel } from './floatingWidget.ts'
 
@@ -6,13 +6,23 @@ import { injectFloatingWidget, collapseFloatingPanel, togglePanel } from './floa
 
 injectFloatingWidget();
 
-// ─── Auto-detect on Kalshi detail pages ──────────────────────────────────────
+// ─── Auto-detect on Kalshi pages ─────────────────────────────────────────────
 
 function tryAutoDetect(): void {
-  const market = detectKalshiDetail();
-  if (market) {
-    console.log('[IQ Auto-detect]', market);
-    chrome.runtime.sendMessage({ type: 'MARKETS_DETECTED', payload: [market] }).catch(() => {});
+  const markets: ReturnType<typeof detectKalshiDetail>[] = [];
+
+  const detail = detectKalshiDetail();
+  if (detail) markets.push(detail);
+
+  if (!detail) {
+    // On home/browse pages, detect visible slide cards instead
+    const slides = detectKalshiSlides();
+    markets.push(...slides);
+  }
+
+  if (markets.length) {
+    console.log('[IQ Auto-detect]', markets);
+    chrome.runtime.sendMessage({ type: 'MARKETS_DETECTED', payload: markets }).catch(() => {});
   }
 }
 
