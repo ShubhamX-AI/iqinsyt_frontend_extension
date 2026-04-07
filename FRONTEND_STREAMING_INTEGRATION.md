@@ -276,29 +276,24 @@ Recommended behavior:
 
 ## 7. Stage Values You Should Expect
 
-Your UI should treat `stage` as display-only text key and not hardcode strict workflow assumptions.
+Your UI should treat `stage` as a display-only string. Do not hardcode strict workflow assumptions — handle unknown stages gracefully.
 
-Current stages include:
+Current stages in order:
 
-- `request.accepted`
-- `cache.lookup.started`
-- `cache.lookup.hit`
-- `cache.lookup.miss`
-- `history.write.scheduled`
-- `search.started`
-- `search.completed`
-- `llm.pipeline.started`
-- `llm.attempt.started`
-- `llm.attempt.completed`
-- `llm.attempt.failed`
-- `compliance.retry`
-- `compliance.passed`
-- `compliance.quarantine`
-- `compliance.quarantined`
-- `llm.pipeline.completed`
-- `llm.unavailable`
-- `persist.started`
-- `persist.completed`
+| Stage | Event type | When |
+|-------|-----------|------|
+| `request.accepted` | `research.started` | Immediately on request |
+| `cache.lookup.started` | `research.progress` | Cache check begins |
+| `cache.lookup.hit` | `research.progress` | Result found in cache |
+| `cache.lookup.miss` | `research.progress` | Cache miss, fresh pipeline starts |
+| `history.write.scheduled` | `research.progress` | Cache hit path only |
+| `search.started` | `research.progress` | Web search begins |
+| `search.completed` | `research.progress` | Web search done (check `meta.data_retrieval_available`) |
+| `llm.started` | `research.progress` | LLM generation begins |
+| `llm.completed` | `research.progress` | LLM returned valid sections |
+| `llm.unavailable` | `research.progress` | LLM failed — stream ends with `research.error` |
+| `persist.started` | `research.progress` | Cache + history write begins |
+| `persist.completed` | `research.progress` | Persistence done |
 
 ## 8. Abort / Retry
 
