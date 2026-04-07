@@ -54,6 +54,44 @@ export function detectKalshiDetail(): DetectedMarket | null {
   return { id, title, source: 'kalshi.com', url: window.location.href, outcomes, volume };
 }
 
+/**
+ * Auto-detect markets from Kalshi home/browse page carousel slides.
+ * Returns all visible slide markets (typically the active one).
+ */
+export function detectKalshiSlides(): DetectedMarket[] {
+  if (window.location.hostname !== 'kalshi.com') return [];
+
+  const results: DetectedMarket[] = [];
+  const seen = new Set<string>();
+
+  for (const slide of document.querySelectorAll('.market-slide-container')) {
+    const el = slide as HTMLElement;
+
+    // Only parse visible slides (active slide has a descendant with opacity-100 class)
+    if (!el.querySelector('.opacity-100')) continue;
+
+    const titleEl = el.querySelector('h2.typ-headline-x20 span, h2.typ-headline-x20');
+    const title = titleEl?.textContent?.trim();
+    if (!title || title.length < 5) continue;
+
+    const linkEl = el.querySelector('a[href*="/markets/"]');
+    const url = linkEl ? `https://kalshi.com${linkEl.getAttribute('href')}` : window.location.href;
+
+    const outcomes = extractTileOutcomes(el);
+    if (!outcomes.length) continue;
+
+    const volume = extractVolume(el.innerText ?? '');
+    const id = buildId(title);
+
+    if (!seen.has(id)) {
+      seen.add(id);
+      results.push({ id, title, source: 'kalshi.com', url, outcomes, volume });
+    }
+  }
+
+  return results;
+}
+
 // ─── Finding Helpers (for picker highlighting) ─────────────────────────────────
 
 function findKalshiTile(el: HTMLElement): HTMLElement | null {

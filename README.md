@@ -89,10 +89,11 @@ Legacy architecture references (`architecture.md`, `phases.md`) are kept as-is. 
 Required build-time variable:
 
 - `VITE_BACKEND_URL`: backend base URL used by API calls and token refresh.
+- `VITE_API_KEY` (optional but recommended): sent as `X-API-Key` for `/v1/research` streaming calls.
 
 Where it is used:
 
-- `src/api/client.ts` to call `/v1/insight`, `/v1/auth/token`, and `/v1/user/plan`.
+- `src/api/client.ts` to call `/v1/research` (streaming), `/v1/auth/token`, and `/v1/user/plan`.
 - `src/auth/tokenManager.ts` to call `/v1/auth/refresh`.
 
 ## Repository Map (Every Current File/Folder)
@@ -192,7 +193,7 @@ iqinsyt_frontend_extension/
 | `src/auth/tokenManager.ts` | File | Manages token storage in `chrome.storage.local` and handles token refresh flow. |
 | `src/assets/` | Dir | Local source-asset folder reserved for future static assets (currently empty). |
 | `src/components/` | Dir | Presentational UI components for side panel states and research output rendering. |
-| `src/components/StatusBar.tsx` | File | Status strip component that reflects current app phase and loading state. |
+| `src/components/StatusBar.tsx` | File | Status strip component that reflects current app phase and streaming state. |
 | `src/components/EventCard.tsx` | File | Displays detected event details and analysis action trigger. |
 | `src/components/ManualInput.tsx` | File | Manual event-entry fallback form when automatic detection fails. |
 | `src/components/SectionBlock.tsx` | File | Expandable/collapsible section renderer for research content blocks. |
@@ -269,7 +270,7 @@ src/
 | `src/content/picker.ts` | File | Interactive picker that highlights candidates, handles click/cancel, and emits detection messages. Delegates Kalshi logic to `sites/kalshi/parseMarket.ts`. |
 | `src/content/sites/kalshi/parseMarket.ts` | File | Single source of truth for all Kalshi DOM logic: finding candidates for highlighting, parsing listing tiles and detail pages, and auto-detecting market data on detail pages. |
 | `src/components/` | Dir | Side panel presentation layer for status, selected event, manual input, output, and errors. |
-| `src/components/StatusBar.tsx` | File | Header/status component reflecting current phase and loading indicator. |
+| `src/components/StatusBar.tsx` | File | Header/status component reflecting current phase and stream activity indicator. |
 | `src/components/EventCard.tsx` | File | Event summary card with action button to trigger analysis. |
 | `src/components/ManualInput.tsx` | File | Manual entry form fallback when no event is auto-detected. |
 | `src/components/SectionBlock.tsx` | File | Section item renderer with expandable body and unavailable fallback text. |

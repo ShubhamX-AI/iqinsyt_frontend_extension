@@ -18,7 +18,7 @@ const SECTIONS: { key: keyof InsightSections; label: string }[] = [
 ];
 
 export default function ResearchOutput({ response, onRerun }: Props) {
-  const { sections, cached, cachedAt, dataRetrievalAvailable } = response;
+  const { sections, cached, cachedAt, dataRetrievalAvailable, generatedAt, requestId } = response;
 
   return (
     <div>
@@ -31,6 +31,10 @@ export default function ResearchOutput({ response, onRerun }: Props) {
         {!dataRetrievalAvailable && (
           <span className="iq-badge">Data retrieval unavailable</span>
         )}
+        <span className="iq-badge">
+          Generated {new Date(generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
+        <span className="iq-badge">Req {requestId.slice(0, 8)}</span>
       </div>
 
       <div className="iq-card">

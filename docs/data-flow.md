@@ -22,8 +22,12 @@ sequenceDiagram
   BG->>Panel: MARKETS_DETECTED
   Panel->>Panel: phase = detected, detectedEvent = markets[0]
   Panel->>BG: REQUEST_ANALYSIS {title, source}
-  BG->>API: POST /v1/insight (Bearer token)
-  API-->>BG: InsightResponse
+  BG->>API: POST /v1/research (Accept: text/event-stream)
+  API-->>BG: research.started
+  BG-->>Panel: ANALYSIS_STARTED
+  API-->>BG: research.progress (0..n)
+  BG-->>Panel: ANALYSIS_PROGRESS (0..n)
+  API-->>BG: research.completed
   BG-->>Panel: ANALYSIS_RESULT
   Panel->>Panel: phase = result
 ```
@@ -40,6 +44,7 @@ sequenceDiagram
   Content->>BG: DETECTION_FAILED
   Panel->>Panel: phase = manual
   Panel->>BG: REQUEST_ANALYSIS (manual event)
+  BG-->>Panel: ANALYSIS_STARTED/ANALYSIS_PROGRESS (stream)
   BG-->>Panel: ANALYSIS_RESULT | ANALYSIS_ERROR
 ```
 
@@ -69,7 +74,7 @@ sequenceDiagram
   participant API as Backend API
 
   Panel->>BG: REQUEST_ANALYSIS
-  BG->>Client: fetchInsight(event)
+  BG->>Client: streamInsight(event)
   Client->>Auth: getAccessToken()
   Auth-->>Client: token | null
   alt no token or 401
@@ -81,12 +86,31 @@ sequenceDiagram
   else other API failures/timeouts
     Client-->>BG: throw ApiError
     BG-->>Panel: ANALYSIS_ERROR("Something went wrong. Try again.")
+  else stream terminal error
+    Client-->>BG: throw ResearchStreamError
+    BG-->>Panel: ANALYSIS_ERROR("<backend message>")
   else success
-    Client->>API: POST /v1/insight
-    API-->>Client: InsightResponse
+    Client->>API: POST /v1/research (SSE)
+    API-->>Client: research.started/progress/completed
     Client-->>BG: response
     BG-->>Panel: ANALYSIS_RESULT
   end
+```
+
+## Stream Cancel Path
+
+```mermaid
+sequenceDiagram
+  participant User as User
+  participant Panel as Side Panel UI
+  participant BG as Background Worker
+  participant API as Backend API
+
+  User->>Panel: Click "Cancel analysis"
+  Panel->>BG: CANCEL_ANALYSIS
+  BG->>API: Abort active /v1/research stream
+  BG-->>Panel: ANALYSIS_CANCELLED
+  Panel->>Panel: phase = detected (if event exists) else idle
 ```
 
 ## Kalshi Auto-Detect Path
@@ -112,5 +136,6 @@ sequenceDiagram
 - Candidate lookup uses site-specific finders (`findKalshiCandidate`) with generic scoring fallback.
 - `parseKalshiListingTile()` / `parseKalshiDetailPage()` require a valid title and at least one parsed outcome before emitting `MARKETS_DETECTED`.
 - JWT expiry is checked before each authed request; refresh is attempted if near expiry (`< 60s`).
-- Request timeout is enforced (`AbortSignal.timeout(12_000)`).
+- Stream request timeout is enforced (`AbortSignal.timeout(45_000)` when no external signal is provided).
+- User-driven cancellation is supported via `CANCEL_ANALYSIS` + `AbortController`.
 - UI receives normalized message types, not raw exceptions.

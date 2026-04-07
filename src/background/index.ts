@@ -1,5 +1,7 @@
-import { fetchInsight, AuthError, SubscriptionError } from '../api/client.ts'
+import { streamInsight, AuthError, SubscriptionError, ResearchStreamError } from '../api/client.ts'
 import type { ExtensionMessage, DetectedEvent } from '../shared/types.ts'
+
+let activeAnalysisAbort: AbortController | null = null;
 
 // Toggle the floating panel when the toolbar icon is clicked
 chrome.action.onClicked.addListener((tab) => {
@@ -44,6 +46,14 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
       handleAnalysis(message.payload as DetectedEvent);
       break;
 
+    case 'CANCEL_ANALYSIS':
+      if (activeAnalysisAbort) {
+        activeAnalysisAbort.abort();
+      } else {
+        chrome.runtime.sendMessage({ type: 'ANALYSIS_CANCELLED' }).catch(() => {});
+      }
+      break;
+
     case 'CLOSE_PANEL':
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const tabId = tabs[0]?.id;
@@ -57,19 +67,46 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
 
 async function handleAnalysis(event: DetectedEvent): Promise<void> {
   console.log('[Background] Starting analysis for:', event.title);
+  if (activeAnalysisAbort) activeAnalysisAbort.abort();
+  const controller = new AbortController();
+  activeAnalysisAbort = controller;
+
   try {
-    const result = await fetchInsight(event);
+    const result = await streamInsight(event, {
+      signal: controller.signal,
+      onStarted: (payload) => {
+        chrome.runtime.sendMessage({ type: 'ANALYSIS_STARTED', payload }).catch(() => {});
+      },
+      onProgress: (payload) => {
+        chrome.runtime.sendMessage({ type: 'ANALYSIS_PROGRESS', payload }).catch(() => {});
+      },
+    });
+
+    if (activeAnalysisAbort !== controller) return;
     console.log('[Background] Analysis result received');
     chrome.runtime.sendMessage({ type: 'ANALYSIS_RESULT', payload: result }).catch(() => {});
   } catch (err) {
+    if (activeAnalysisAbort !== controller) return;
+
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      chrome.runtime.sendMessage({ type: 'ANALYSIS_CANCELLED' }).catch(() => {});
+      return;
+    }
+
     console.log('[Background] Analysis error:', err);
     if (err instanceof AuthError) {
       chrome.runtime.sendMessage({ type: 'AUTH_REQUIRED' }).catch(() => {});
+    } else if (err instanceof ResearchStreamError) {
+      chrome.runtime.sendMessage({ type: 'ANALYSIS_ERROR', payload: err.message }).catch(() => {});
     } else {
       const message = err instanceof SubscriptionError
         ? 'Update your plan to continue.'
         : 'Something went wrong. Try again.';
       chrome.runtime.sendMessage({ type: 'ANALYSIS_ERROR', payload: message }).catch(() => {});
+    }
+  } finally {
+    if (activeAnalysisAbort === controller) {
+      activeAnalysisAbort = null;
     }
   }
 }

@@ -7,6 +7,10 @@ Defined in `src/shared/types.ts`.
 - `EVENT_DETECTED`: `payload` is `DetectedEvent`
 - `MARKETS_DETECTED`: `payload` is `DetectedMarket[]`
 - `REQUEST_ANALYSIS`: `payload` is `DetectedEvent`
+- `CANCEL_ANALYSIS`: no payload
+- `ANALYSIS_STARTED`: `payload` is `ResearchStartedEvent`
+- `ANALYSIS_PROGRESS`: `payload` is `ResearchProgressEvent`
+- `ANALYSIS_CANCELLED`: no payload
 - `ANALYSIS_RESULT`: `payload` is `InsightResponse`
 - `ANALYSIS_ERROR`: `payload` is user-facing error message string
 - `DETECTION_FAILED`: no payload
@@ -45,13 +49,26 @@ Notes:
 
 Defined in `src/api/types.ts` and consumed by `src/api/client.ts`.
 
-- `POST /v1/insight` with `InsightRequest`
+- `POST /v1/research` with `InsightRequest`
   - `eventTitle`
   - `eventSource`
   - `timestamp`
 - `POST /v1/auth/token`
 - `POST /v1/auth/refresh`
 - `GET /v1/user/plan`
+
+`/v1/research` now streams server-sent events (`text/event-stream`) and emits:
+
+- `research.started`
+- `research.progress`
+- `research.completed`
+- `research.error`
+
+Frontend behavior:
+
+- Background reads stream events and relays `ANALYSIS_STARTED`/`ANALYSIS_PROGRESS` to side panel.
+- `research.completed` is mapped into the existing `InsightResponse` shape and emitted as `ANALYSIS_RESULT`.
+- `research.error` is normalized into `ANALYSIS_ERROR`.
 
 `InsightResponse` required fields used by UI:
 
@@ -61,17 +78,23 @@ Defined in `src/api/types.ts` and consumed by `src/api/client.ts`.
 
 ## Validation, Sanitization, and Error Normalization
 
-- `sanitize()` strips HTML-like tags and truncates event title to 500 chars.
-- `authedFetch()` enforces bearer token and maps HTTP statuses:
+- `sanitize()` strips HTML-like tags and truncates:
+  - event title to 500 chars
+  - event source to 253 chars
+- `authedFetch()` maps HTTP statuses:
   - `401` -> `AuthError`
   - `402` -> `SubscriptionError`
   - other non-2xx -> `ApiError`
-- `fetchInsight()` sets 12s timeout.
+- Auth header wiring is currently stubbed in client for dev mode (`token = ''`); auth code path remains prepared for re-enable.
+- `streamInsight()` requests `Accept: text/event-stream` and includes `X-API-Key` when `VITE_API_KEY` is present.
+- `streamInsight()` sets a default timeout (`45_000 ms`) unless a caller-provided abort signal is used.
 - Picker candidate selection uses ancestor scoring plus market indicators (percentages/outcome-like text).
 - `parseKalshiListingTile()` / `parseKalshiDetailPage()` require non-empty text, a valid title, and at least one parsed outcome.
 - Picker emits `DETECTION_FAILED` when no candidate is found or parsing fails.
 - Background maps errors to UI-safe messages/events:
   - `AuthError` -> `AUTH_REQUIRED`
+  - stream abort -> `ANALYSIS_CANCELLED`
+  - `ResearchStreamError` (`research.error`) -> `ANALYSIS_ERROR` with backend-provided message
   - `SubscriptionError` -> `ANALYSIS_ERROR` with plan-upgrade message
   - any other error -> `ANALYSIS_ERROR` with generic retry message
 

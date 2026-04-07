@@ -5,7 +5,8 @@ const STATE_LABELS: Record<string, string> = {
   picking:  'Waiting for selection',
   detected: 'Event selected',
   manual:   'Enter manually',
-  loading:  'Analysing...',
+  connecting: 'Connecting...',
+  streaming: 'Researching...',
   result:   'Done',
   error:    'Error',
 };
@@ -23,7 +24,7 @@ export default function StatusBar({ onClose }: StatusBarProps) {
       <div className="iq-status-bar__left">
         <span className="iq-status-bar__brand">IQinsyt</span>
         <div className="iq-status-bar__state">
-          {phase === 'loading' ? (
+          {phase === 'connecting' || phase === 'streaming' ? (
             <span className="iq-spinner" aria-hidden="true" />
           ) : (
             <span className={`iq-dot ${phase === 'detected' || phase === 'result' ? 'iq-dot--active' : ''}`} />

@@ -19,15 +19,22 @@ Likely outcome:
 Checks:
 
 - Verify `REQUEST_ANALYSIS` is sent from side panel hook.
-- Verify background worker receives message and calls `fetchInsight`.
+- Verify background worker receives message and calls `streamInsight`.
 - Confirm `VITE_BACKEND_URL` is set correctly at build time.
-- Inspect network/API status mapping (`401`, `402`, other errors).
+- Confirm `VITE_API_KEY` is set when backend requires `X-API-Key`.
+- Verify stream lifecycle messages arrive in order:
+  - `ANALYSIS_STARTED`
+  - `ANALYSIS_PROGRESS` (optional, repeated)
+  - terminal `ANALYSIS_RESULT` or `ANALYSIS_ERROR`
+- Inspect network/API status mapping (`401`, `402`, stream `research.error`, transport errors).
 
 Likely UI results:
 
 - `401` or missing token -> `AUTH_REQUIRED` reset.
 - `402` -> plan-upgrade error message.
+- stream terminal errors -> backend-provided error message.
 - other failures/timeouts -> generic retry error message.
+- cancel action -> `ANALYSIS_CANCELLED` then return to `detected`/`idle`.
 
 ## Unexpected Auth Resets
 

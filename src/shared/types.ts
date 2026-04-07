@@ -4,6 +4,10 @@ export type MessageType =
   | 'MARKETS_DETECTED' // content script → background → side panel
   | 'EVENT_DETECTED'   // content script → background → side panel
   | 'REQUEST_ANALYSIS' // side panel → background → API
+  | 'CANCEL_ANALYSIS'  // side panel → background (abort stream)
+  | 'ANALYSIS_STARTED' // background → side panel (stream opened)
+  | 'ANALYSIS_PROGRESS' // background → side panel (stream event)
+  | 'ANALYSIS_CANCELLED' // background → side panel (stream aborted)
   | 'ANALYSIS_RESULT'  // background → side panel
   | 'ANALYSIS_ERROR'   // background → side panel (API call failed)
   | 'DETECTION_FAILED' // background → side panel (trigger manual input)
@@ -47,13 +51,32 @@ export interface DetectedEvent {
 
 // ─── App State ────────────────────────────────────────────────────────────────
 
-import type { InsightResponse } from '../api/types.ts'
+import type {
+  InsightResponse,
+  ResearchStartedEvent,
+  ResearchProgressEvent,
+} from '../api/types.ts'
 
-export type AppPhase = 'idle' | 'picking' | 'detected' | 'loading' | 'result' | 'error' | 'manual';
+export type AppPhase =
+  | 'idle'
+  | 'picking'
+  | 'detected'
+  | 'connecting'
+  | 'streaming'
+  | 'result'
+  | 'error'
+  | 'manual';
 
 export interface UserInfo {
   isAuthenticated: boolean;
   plan: 'free' | 'starter' | 'pro' | null;
+}
+
+export interface AnalysisStreamState {
+  requestId: string | null;
+  stage: string | null;
+  message: string | null;
+  progress: ResearchProgressEvent[];
 }
 
 export interface AppState {
@@ -61,6 +84,7 @@ export interface AppState {
   detectedEvent: DetectedEvent | null;
   result: InsightResponse | null;
   error: string | null;
+  stream: AnalysisStreamState;
   isSiteAuthorized: boolean | null;
   user: UserInfo;
 }
@@ -72,6 +96,9 @@ export type AppAction =
   | { type: 'EVENT_DETECTED'; payload: DetectedEvent }
   | { type: 'DETECTION_FAILED' }
   | { type: 'REQUEST_ANALYSIS' }
+  | { type: 'ANALYSIS_STARTED'; payload: ResearchStartedEvent }
+  | { type: 'ANALYSIS_PROGRESS'; payload: ResearchProgressEvent }
+  | { type: 'ANALYSIS_CANCELLED' }
   | { type: 'ANALYSIS_RESULT'; payload: InsightResponse }
   | { type: 'SHOW_ERROR'; payload: string }
   | { type: 'DISMISS_ERROR' }

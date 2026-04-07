@@ -9,14 +9,23 @@ import EventCard from '../components/EventCard.tsx'
 import ManualInput from '../components/ManualInput.tsx'
 import ResearchOutput from '../components/ResearchOutput.tsx'
 import ErrorState from '../components/ErrorState.tsx'
+import StreamingStatus from '../components/StreamingStatus.tsx'
 
 // ─── Initial State ────────────────────────────────────────────────────────────
+
+const emptyStreamState: AppState['stream'] = {
+  requestId: null,
+  stage: null,
+  message: null,
+  progress: [],
+};
 
 const initialState: AppState = {
   phase: 'idle',
   detectedEvent: null,
   result: null,
   error: null,
+  stream: emptyStreamState,
   isSiteAuthorized: null,
   user: { isAuthenticated: false, plan: null },
 };
@@ -39,7 +48,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'MARKETS_DETECTED': {
       const markets = action.payload;
       if (!markets.length) {
-        return { ...state, phase: 'manual', detectedEvent: null, result: null, error: null };
+        return { ...state, phase: 'manual', detectedEvent: null, result: null, error: null, stream: emptyStreamState };
       }
       return {
         ...state,
@@ -47,6 +56,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         detectedEvent: toDetectedEvent(markets[0]),
         result: null,
         error: null,
+        stream: emptyStreamState,
       };
     }
 
@@ -57,6 +67,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         detectedEvent: action.payload,
         result: null,
         error: null,
+        stream: emptyStreamState,
       };
 
     case 'DETECTION_FAILED':
@@ -66,16 +77,54 @@ function appReducer(state: AppState, action: AppAction): AppState {
         detectedEvent: null,
         result: null,
         error: null,
+        stream: emptyStreamState,
       };
 
     case 'START_PICKING':
-      return { ...state, phase: 'picking' };
+      return { ...state, phase: 'picking', error: null, stream: emptyStreamState };
 
     case 'PICKER_CANCELLED':
-      return { ...state, phase: state.detectedEvent ? 'detected' : 'idle' };
+      return { ...state, phase: state.detectedEvent ? 'detected' : 'idle', stream: emptyStreamState };
 
     case 'REQUEST_ANALYSIS':
-      return { ...state, phase: 'loading', error: null };
+      return { ...state, phase: 'connecting', error: null, result: null, stream: emptyStreamState };
+
+    case 'ANALYSIS_STARTED':
+      return {
+        ...state,
+        phase: 'streaming',
+        error: null,
+        stream: {
+          requestId: action.payload.request_id,
+          stage: action.payload.stage,
+          message: action.payload.message,
+          progress: [{
+            request_id: action.payload.request_id,
+            stage: action.payload.stage,
+            message: action.payload.message,
+          }],
+        },
+      };
+
+    case 'ANALYSIS_PROGRESS':
+      return {
+        ...state,
+        phase: 'streaming',
+        stream: {
+          requestId: action.payload.request_id,
+          stage: action.payload.stage,
+          message: action.payload.message,
+          progress: [...state.stream.progress, action.payload].slice(-40),
+        },
+      };
+
+    case 'ANALYSIS_CANCELLED':
+      return {
+        ...state,
+        phase: state.detectedEvent ? 'detected' : 'idle',
+        error: null,
+        stream: emptyStreamState,
+      };
 
     case 'ANALYSIS_RESULT':
       return { ...state, phase: 'result', result: action.payload, error: null };
@@ -84,7 +133,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, phase: 'error', error: action.payload };
 
     case 'DISMISS_ERROR':
-      return { ...state, phase: 'idle', error: null };
+      return {
+        ...state,
+        phase: state.detectedEvent ? 'detected' : 'idle',
+        error: null,
+        stream: emptyStreamState,
+      };
 
     case 'AUTH_REQUIRED':
       return { ...initialState };
@@ -108,11 +162,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
 function PanelContent() {
   const { state, dispatch } = useAppContext();
-  const { triggerAnalysis } = useInsightQuery();
+  const { triggerAnalysis, cancelAnalysis } = useInsightQuery();
   useEventDetection();
   useAuth();
 
-  const { phase, detectedEvent, result, error, isSiteAuthorized } = state;
+  const { phase, detectedEvent, result, error, stream, isSiteAuthorized } = state;
 
   useEffect(() => {
     const requestStatus = () => {
@@ -144,6 +198,10 @@ function PanelContent() {
     if (detectedEvent) triggerAnalysis(detectedEvent);
   }
 
+  function handleCancelAnalysis() {
+    cancelAnalysis();
+  }
+
   function handleDismiss() {
     dispatch({ type: 'DISMISS_ERROR' });
   }
@@ -155,7 +213,7 @@ function PanelContent() {
   return (
     <div className="iq-panel">
       <StatusBar onClose={handleClosePanel} />
-      <div className="iq-content">
+      <div className="iq-content" style={phase === 'detected' ? { justifyContent: 'center', alignItems: 'center' } : undefined}>
 
         {phase === 'idle' && (
           <div className="iq-idle">
@@ -207,11 +265,14 @@ function PanelContent() {
           />
         )}
 
-        {phase === 'loading' && (
-          <div className="iq-loading">
-            <div className="iq-loading__spinner" />
-            <p className="iq-loading__text">Analysing event data...</p>
-          </div>
+        {(phase === 'connecting' || phase === 'streaming') && (
+          <StreamingStatus
+            phase={phase}
+            stage={stream.stage}
+            message={stream.message}
+            progress={stream.progress}
+            onCancel={handleCancelAnalysis}
+          />
         )}
 
         {phase === 'result' && result && detectedEvent && (
@@ -227,7 +288,7 @@ function PanelContent() {
         )}
 
         {phase === 'error' && error && (
-          <ErrorState message={error} onDismiss={handleDismiss} />
+          <ErrorState message={error} onDismiss={handleDismiss} onRetry={detectedEvent ? handleRerun : undefined} />
         )}
 
       </div>

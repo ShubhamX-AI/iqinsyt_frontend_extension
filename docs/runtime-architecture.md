@@ -30,12 +30,14 @@ This separation is required by Manifest V3 and is also the reason all communicat
   - Enable open-on-action side panel behavior.
   - Relay picker detection messages (`MARKETS_DETECTED`, `DETECTION_FAILED`, `PICKER_CANCELLED`) and `EVENT_DETECTED` to side panel listeners.
   - Forward `START_PICKER` from side panel to active-tab content script.
-  - Handle `REQUEST_ANALYSIS` by calling API client.
+  - Handle `REQUEST_ANALYSIS` by calling streaming API client (`/v1/research` SSE).
+  - Relay stream lifecycle messages (`ANALYSIS_STARTED`, `ANALYSIS_PROGRESS`, `ANALYSIS_RESULT`, `ANALYSIS_ERROR`, `ANALYSIS_CANCELLED`).
+  - Handle `CANCEL_ANALYSIS` by aborting active stream via `AbortController`.
   - Normalize error outcomes into message types the UI can consume.
 - Side panel:
-  - Own local reducer state (`phase`, single `detectedEvent`, `result`, `error`, `user`) and phase transitions.
+  - Own local reducer state (`phase`, single `detectedEvent`, `result`, `error`, `stream`, `user`) and phase transitions.
   - Subscribe to runtime messages via hooks.
-  - Trigger analysis requests through background, never direct privileged orchestration.
+  - Trigger analysis/cancel requests through background, never direct privileged orchestration.
 
 ## Lifecycle Notes
 

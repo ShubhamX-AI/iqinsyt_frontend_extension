@@ -420,6 +420,14 @@ details[open] .iq-section__chevron {
   line-height: 1.5;
 }
 
+.iq-error__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 220px;
+  margin: 0 auto;
+}
+
 /* ─── Idle State ─────────────────────────────────────────────────────────────── */
 
 .iq-idle {
@@ -473,4 +481,78 @@ details[open] .iq-section__chevron {
   font-size: 13px;
   color: var(--text);
   margin: 0;
+}
+
+/* ─── Streaming State ───────────────────────────────────────────────────────── */
+
+.iq-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.iq-stream__hero {
+  background: linear-gradient(180deg, var(--accent-bg) 0%, transparent 100%);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+
+.iq-stream__spinner {
+  margin: 0 auto 10px;
+}
+
+.iq-stream__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.iq-stream__detail {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.iq-stream__stage {
+  margin-top: 10px;
+}
+
+.iq-stream__timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.iq-stream__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.iq-stream__step-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.iq-stream__step-stage {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--text-h);
+}
+
+.iq-stream__step-message {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text);
 }
