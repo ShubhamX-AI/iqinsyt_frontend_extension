@@ -1,6 +1,5 @@
 // import { getAccessToken } from '../auth/tokenManager.ts'  // TODO: re-enable auth
 import type {
-  InsightRequest,
   InsightResponse,
   // AuthTokenResponse,  // TODO: re-enable auth
   // UserPlanResponse,   // TODO: re-enable auth
