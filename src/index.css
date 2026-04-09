@@ -679,10 +679,64 @@ details[open] .iq-section__chevron {
 .iq-section__body {
   margin: 7px 0 0;
   padding-left: 32px;
-  white-space: pre-wrap;
   font-size: 12px;
   line-height: 1.65;
   color: var(--text);
+}
+
+/* ─── Markdown Rendering ────────────────────────────────────────────────────── */
+
+.iq-markdown p {
+  margin: 0 0 8px;
+}
+
+.iq-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.iq-markdown ul,
+.iq-markdown ol {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+
+.iq-markdown li {
+  margin-bottom: 3px;
+}
+
+.iq-markdown strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.iq-markdown em {
+  font-style: italic;
+}
+
+.iq-markdown code {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  background: var(--surface-2, rgba(255,255,255,0.06));
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+.iq-markdown h1,
+.iq-markdown h2,
+.iq-markdown h3,
+.iq-markdown h4 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 10px 0 4px;
+  color: var(--text);
+}
+
+.iq-markdown blockquote {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--border, rgba(255,255,255,0.1));
+  color: var(--text-soft);
+  font-style: italic;
 }
 
 .iq-section__unavailable {

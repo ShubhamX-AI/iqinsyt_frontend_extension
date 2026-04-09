@@ -1,3 +1,5 @@
+import ReactMarkdown from 'react-markdown'
+
 interface Props {
   index: number;
   title: string;
@@ -22,7 +24,9 @@ export default function SectionBlock({ index, title, body }: Props) {
         <Chevron />
       </summary>
       {body ? (
-        <p className="iq-section__body">{body}</p>
+        <div className="iq-section__body iq-markdown">
+          <ReactMarkdown>{body}</ReactMarkdown>
+        </div>
       ) : (
         <p className="iq-section__unavailable">[Data unavailable for this section]</p>
       )}
