@@ -4,6 +4,7 @@ export interface InsightRequest {
   eventTitle: string;   // e.g. "Manchester City vs Arsenal"
   eventSource: string;  // hostname, e.g. "polymarket.com"
   timestamp: number;    // Unix ms
+  redo: boolean;        // true when user explicitly re-runs a completed analysis
 }
 
 // ─── Response ─────────────────────────────────────────────────────────────────

@@ -36,9 +36,6 @@ export default function EventCard({
         </div>
       </div>
       <h2 className="iq-event-card__title">{event.title}</h2>
-      <p className="iq-event-card__source">
-        Review the selection, then generate a structured brief with current drivers, risks, and confidence.
-      </p>
       <div className="iq-event-card__actions">
         <button className="iq-btn iq-btn--primary" onClick={showRerun ? onRerun : onAnalyse} disabled={loading}>
           {loading ? 'Analysing...' : showRerun ? 'Redo' : 'Analyse'}

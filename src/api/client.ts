@@ -2,8 +2,8 @@
 import type {
   InsightRequest,
   InsightResponse,
-  AuthTokenResponse,
-  UserPlanResponse,
+  // AuthTokenResponse,  // TODO: re-enable auth
+  // UserPlanResponse,   // TODO: re-enable auth
   ResearchStartedEvent,
   ResearchProgressEvent,
   ResearchCompletedEvent,
@@ -48,7 +48,7 @@ function sanitize(text: string, maxLength: number): string {
   return text.replace(/<[^>]*>/g, '').trim().slice(0, maxLength);
 }
 
-function toInsightRequest(event: DetectedEvent): InsightRequest {
+function toInsightRequest(event: DetectedEvent) {
   return {
     eventTitle: sanitize(event.title, 500),
     eventSource: sanitize(event.source, 253),
@@ -117,13 +117,14 @@ async function authedFetch(path: string, init: RequestInit): Promise<Response> {
 // ─── Endpoints ────────────────────────────────────────────────────────────────
 
 interface StreamInsightOptions {
+  redo?: boolean;
   signal?: AbortSignal;
   onStarted?: (payload: ResearchStartedEvent) => void;
   onProgress?: (payload: ResearchProgressEvent) => void;
 }
 
 export async function streamInsight(event: DetectedEvent, options: StreamInsightOptions = {}): Promise<InsightResponse> {
-  const body = toInsightRequest(event);
+  const body = { ...toInsightRequest(event), redo: options.redo ?? false };
 
   const response = await authedFetch('/v1/research', {
     method: 'POST',
@@ -200,18 +201,19 @@ export async function streamInsight(event: DetectedEvent, options: StreamInsight
   return completed;
 }
 
-export async function fetchAuthToken(code: string): Promise<AuthTokenResponse> {
-  const response = await fetch(`${BASE_URL}/v1/auth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
-  });
+// TODO: re-enable auth
+// export async function fetchAuthToken(code: string): Promise<AuthTokenResponse> {
+//   const response = await fetch(`${BASE_URL}/v1/auth/token`, {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({ code }),
+//   });
+//
+//   if (!response.ok) throw new ApiError(`Auth failed: ${response.status}`);
+//   return response.json() as Promise<AuthTokenResponse>;
+// }
 
-  if (!response.ok) throw new ApiError(`Auth failed: ${response.status}`);
-  return response.json() as Promise<AuthTokenResponse>;
-}
-
-export async function fetchUserPlan(): Promise<UserPlanResponse> {
-  const response = await authedFetch('/v1/user/plan', { method: 'GET' });
-  return response.json() as Promise<UserPlanResponse>;
-}
+// export async function fetchUserPlan(): Promise<UserPlanResponse> {
+//   const response = await authedFetch('/v1/user/plan', { method: 'GET' });
+//   return response.json() as Promise<UserPlanResponse>;
+// }

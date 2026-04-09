@@ -42,9 +42,11 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
       broadcastSiteAuthStatus().catch(() => {});
       break;
 
-    case 'REQUEST_ANALYSIS':
-      handleAnalysis(message.payload as DetectedEvent);
+    case 'REQUEST_ANALYSIS': {
+      const { event, redo } = message.payload as { event: DetectedEvent; redo: boolean };
+      handleAnalysis(event, redo);
       break;
+    }
 
     case 'CANCEL_ANALYSIS':
       if (activeAnalysisAbort) {
@@ -65,7 +67,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   }
 });
 
-async function handleAnalysis(event: DetectedEvent): Promise<void> {
+async function handleAnalysis(event: DetectedEvent, redo: boolean): Promise<void> {
   console.log('[Background] Starting analysis for:', event.title);
   if (activeAnalysisAbort) activeAnalysisAbort.abort();
   const controller = new AbortController();
@@ -73,6 +75,7 @@ async function handleAnalysis(event: DetectedEvent): Promise<void> {
 
   try {
     const result = await streamInsight(event, {
+      redo,
       signal: controller.signal,
       onStarted: (payload) => {
         chrome.runtime.sendMessage({ type: 'ANALYSIS_STARTED', payload }).catch(() => {});

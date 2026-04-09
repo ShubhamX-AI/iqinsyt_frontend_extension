@@ -29,9 +29,9 @@ export function useInsightQuery() {
   }, [dispatch]);
 
   // Called by components when the user triggers an analysis
-  function triggerAnalysis(event: DetectedEvent) {
+  function triggerAnalysis(event: DetectedEvent, redo = false) {
     dispatch({ type: 'REQUEST_ANALYSIS' });
-    chrome.runtime.sendMessage({ type: 'REQUEST_ANALYSIS', payload: event }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'REQUEST_ANALYSIS', payload: { event, redo } }).catch(() => {});
   }
 
   function cancelAnalysis() {

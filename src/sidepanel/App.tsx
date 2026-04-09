@@ -201,7 +201,7 @@ function PanelContent() {
 
   function handleAnalyse() {
     if (!detectedEvent) return;
-    triggerAnalysis(detectedEvent);
+    triggerAnalysis(detectedEvent, false);
   }
 
   function handleManualSubmit(title: string) {
@@ -211,7 +211,7 @@ function PanelContent() {
   }
 
   function handleRerun() {
-    if (detectedEvent) triggerAnalysis(detectedEvent);
+    if (detectedEvent) triggerAnalysis(detectedEvent, true);
   }
 
   function handleCancelAnalysis() {

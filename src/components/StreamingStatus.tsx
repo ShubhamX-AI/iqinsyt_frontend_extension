@@ -29,7 +29,6 @@ export default function StreamingStatus({ phase, stage, message, progress, onCan
   return (
     <div className="iq-stream">
       <div className="iq-card iq-card--hero iq-stream__hero">
-        <div className="iq-loading__spinner iq-stream__spinner" />
         <p className="iq-stream__title">{title}</p>
         <p className="iq-stream__detail">{detail}</p>
         {stage && (
