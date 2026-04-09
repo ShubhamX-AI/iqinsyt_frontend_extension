@@ -7,6 +7,7 @@ export type MessageType =
   | 'CANCEL_ANALYSIS'  // side panel → background (abort stream)
   | 'ANALYSIS_STARTED' // background → side panel (stream opened)
   | 'ANALYSIS_PROGRESS' // background → side panel (stream event)
+  | 'ANALYSIS_SECTION_DELTA' // background → side panel (section text chunk)
   | 'ANALYSIS_CANCELLED' // background → side panel (stream aborted)
   | 'ANALYSIS_RESULT'  // background → side panel
   | 'ANALYSIS_ERROR'   // background → side panel (API call failed)
@@ -53,8 +54,10 @@ export interface DetectedEvent {
 
 import type {
   InsightResponse,
+  InsightSections,
   ResearchStartedEvent,
   ResearchProgressEvent,
+  ResearchSectionDeltaEvent,
 } from '../api/types.ts'
 
 export type AppPhase =
@@ -77,6 +80,7 @@ export interface AnalysisStreamState {
   stage: string | null;
   message: string | null;
   progress: ResearchProgressEvent[];
+  sections: InsightSections;
 }
 
 export interface AppState {
@@ -98,6 +102,7 @@ export type AppAction =
   | { type: 'REQUEST_ANALYSIS' }
   | { type: 'ANALYSIS_STARTED'; payload: ResearchStartedEvent }
   | { type: 'ANALYSIS_PROGRESS'; payload: ResearchProgressEvent }
+  | { type: 'ANALYSIS_SECTION_DELTA'; payload: ResearchSectionDeltaEvent }
   | { type: 'ANALYSIS_CANCELLED' }
   | { type: 'ANALYSIS_RESULT'; payload: InsightResponse }
   | { type: 'SHOW_ERROR'; payload: string }

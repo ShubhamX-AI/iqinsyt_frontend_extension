@@ -1,7 +1,12 @@
 import { useEffect } from 'react'
 import { useAppContext } from '../sidepanel/context.tsx'
 import type { ExtensionMessage, DetectedEvent } from '../shared/types.ts'
-import type { InsightResponse, ResearchStartedEvent, ResearchProgressEvent } from '../api/types.ts'
+import type {
+  InsightResponse,
+  ResearchStartedEvent,
+  ResearchProgressEvent,
+  ResearchSectionDeltaEvent,
+} from '../api/types.ts'
 
 export function useInsightQuery() {
   const { dispatch } = useAppContext();
@@ -13,6 +18,8 @@ export function useInsightQuery() {
         dispatch({ type: 'ANALYSIS_STARTED', payload: message.payload as ResearchStartedEvent });
       } else if (message.type === 'ANALYSIS_PROGRESS') {
         dispatch({ type: 'ANALYSIS_PROGRESS', payload: message.payload as ResearchProgressEvent });
+      } else if (message.type === 'ANALYSIS_SECTION_DELTA') {
+        dispatch({ type: 'ANALYSIS_SECTION_DELTA', payload: message.payload as ResearchSectionDeltaEvent });
       } else if (message.type === 'ANALYSIS_RESULT') {
         dispatch({ type: 'ANALYSIS_RESULT', payload: message.payload as InsightResponse });
       } else if (message.type === 'ANALYSIS_ERROR') {

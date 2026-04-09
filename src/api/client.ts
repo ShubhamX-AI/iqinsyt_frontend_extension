@@ -1,10 +1,16 @@
 // import { getAccessToken } from '../auth/tokenManager.ts'  // TODO: re-enable auth
 import type {
   InsightResponse,
+  InsightSections,
+  DeepDownCompletedEvent,
+  DeepDownDeltaEvent,
+  DeepDownErrorEvent,
+  DeepDownStartedEvent,
   // AuthTokenResponse,  // TODO: re-enable auth
   // UserPlanResponse,   // TODO: re-enable auth
   ResearchStartedEvent,
   ResearchProgressEvent,
+  ResearchSectionDeltaEvent,
   ResearchCompletedEvent,
   ResearchErrorEvent,
 } from './types.ts'
@@ -32,7 +38,7 @@ export class ResearchStreamError extends Error {
   statusCode: number;
   requestId: string;
 
-  constructor(payload: ResearchErrorEvent) {
+  constructor(payload: ResearchErrorEvent | DeepDownErrorEvent) {
     super(payload.message);
     this.name = 'ResearchStreamError';
     this.code = payload.error;
@@ -120,6 +126,44 @@ interface StreamInsightOptions {
   signal?: AbortSignal;
   onStarted?: (payload: ResearchStartedEvent) => void;
   onProgress?: (payload: ResearchProgressEvent) => void;
+  onSectionDelta?: (payload: ResearchSectionDeltaEvent) => void;
+}
+
+function normalizeResearchSection(payload: Record<string, unknown>): keyof InsightSections | null {
+  const section = payload.section ?? payload.sectionKey ?? payload.section_key ?? payload.key;
+  if (typeof section !== 'string') return null;
+
+  const normalized = section.trim();
+  const aliases: Record<string, keyof InsightSections> = {
+    eventSummary: 'eventSummary',
+    event_summary: 'eventSummary',
+    'event summary': 'eventSummary',
+    keyVariables: 'keyVariables',
+    key_variables: 'keyVariables',
+    'key variables': 'keyVariables',
+    historicalContext: 'historicalContext',
+    historical_context: 'historicalContext',
+    'historical context': 'historicalContext',
+    currentDrivers: 'currentDrivers',
+    current_drivers: 'currentDrivers',
+    'current drivers': 'currentDrivers',
+    riskFactors: 'riskFactors',
+    risk_factors: 'riskFactors',
+    'risk factors': 'riskFactors',
+    dataConfidence: 'dataConfidence',
+    data_confidence: 'dataConfidence',
+    'data confidence': 'dataConfidence',
+    dataGaps: 'dataGaps',
+    data_gaps: 'dataGaps',
+    'data gaps': 'dataGaps',
+  };
+
+  return aliases[normalized] ?? null;
+}
+
+function normalizeResearchDelta(payload: Record<string, unknown>): string | null {
+  const delta = payload.delta ?? payload.content ?? payload.text;
+  return typeof delta === 'string' ? delta : null;
 }
 
 export async function streamInsight(event: DetectedEvent, options: StreamInsightOptions = {}): Promise<InsightResponse> {
@@ -155,6 +199,20 @@ export async function streamInsight(event: DetectedEvent, options: StreamInsight
     if (parsedFrame.eventName === 'research.progress') {
       const payload = parseJsonPayload<ResearchProgressEvent>(parsedFrame.dataText);
       if (payload) options.onProgress?.(payload);
+      return;
+    }
+
+    if (parsedFrame.eventName === 'research.section_delta') {
+      const payload = parseJsonPayload<Record<string, unknown>>(parsedFrame.dataText);
+      if (!payload) return;
+
+      const requestId = typeof payload.request_id === 'string' ? payload.request_id : null;
+      const section = normalizeResearchSection(payload);
+      const delta = normalizeResearchDelta(payload);
+
+      if (requestId && section && delta) {
+        options.onSectionDelta?.({ request_id: requestId, section, delta });
+      }
       return;
     }
 
@@ -197,6 +255,87 @@ export async function streamInsight(event: DetectedEvent, options: StreamInsight
     throw new ApiError('Research stream ended before completion');
   }
 
+  return completed;
+}
+
+interface DeepDownOptions {
+  onStarted?: (payload: DeepDownStartedEvent) => void;
+  onDelta?: (delta: string) => void;
+  signal?: AbortSignal;
+}
+
+export async function deepDown(
+  sectionTitle: string,
+  sectionContent: string,
+  options: DeepDownOptions = {},
+): Promise<string> {
+  const response = await authedFetch('/v1/research/deepdown', {
+    method: 'POST',
+    headers: {
+      Accept: 'text/event-stream',
+      'X-API-Key': API_KEY,
+    },
+    body: JSON.stringify({ sectionTitle, sectionContent }),
+    signal: options.signal ?? AbortSignal.timeout(60_000),
+  });
+
+  if (!response.body) throw new ApiError('Readable stream not available');
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let completed: string | null = null;
+  const accumulated: string[] = [];
+
+  const processFrame = (frame: string) => {
+    const parsed = parseSseFrame(frame);
+    if (!parsed) return;
+
+    if (parsed.eventName === 'deepdown.started') {
+      const payload = parseJsonPayload<DeepDownStartedEvent>(parsed.dataText);
+      if (payload) options.onStarted?.(payload);
+      return;
+    }
+
+    if (parsed.eventName === 'deepdown.delta') {
+      const payload = parseJsonPayload<DeepDownDeltaEvent>(parsed.dataText);
+      if (payload?.delta) {
+        accumulated.push(payload.delta);
+        options.onDelta?.(payload.delta);
+      }
+      return;
+    }
+
+    if (parsed.eventName === 'deepdown.completed') {
+      const payload = parseJsonPayload<DeepDownCompletedEvent>(parsed.dataText);
+      if (payload) completed = payload.result || accumulated.join('');
+      return;
+    }
+
+    if (parsed.eventName === 'deepdown.error') {
+      const payload = parseJsonPayload<DeepDownErrorEvent>(parsed.dataText);
+      if (payload && payload.success === false) throw new ResearchStreamError(payload);
+    }
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    let boundary = buffer.indexOf('\n\n');
+    while (boundary !== -1) {
+      const frame = buffer.slice(0, boundary).trim();
+      buffer = buffer.slice(boundary + 2);
+      if (frame) processFrame(frame);
+      boundary = buffer.indexOf('\n\n');
+    }
+  }
+
+  buffer += decoder.decode();
+  const trailing = buffer.trim();
+  if (trailing) processFrame(trailing);
+
+  if (completed === null) throw new ApiError('Deep down stream ended before completion');
   return completed;
 }
 

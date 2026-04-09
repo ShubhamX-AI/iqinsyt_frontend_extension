@@ -2,7 +2,8 @@ import SectionBlock from './SectionBlock.tsx'
 import type { InsightResponse, InsightSections } from '../api/types.ts'
 
 interface Props {
-  response: InsightResponse;
+  response?: InsightResponse;
+  sections?: InsightSections;
 }
 
 // Display labels in the order architecture.md specifies
@@ -16,9 +17,10 @@ const SECTIONS: { key: keyof InsightSections; label: string }[] = [
   { key: 'dataGaps',          label: 'Data Gaps' },
 ];
 
-export default function ResearchOutput({ response }: Props) {
-  const { sections } = response;
-  // const { sections, cached, cachedAt, dataRetrievalAvailable, generatedAt, requestId } = response;
+export default function ResearchOutput({ response, sections: streamedSections }: Props) {
+  const sections = response?.sections ?? streamedSections;
+
+  if (!sections) return null;
 
   return (
     <div className="iq-result">

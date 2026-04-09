@@ -546,6 +546,9 @@ input {
 }
 
 .iq-event-card__label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   margin: 0;
   font-size: 10px;
   line-height: 1;
@@ -553,6 +556,20 @@ input {
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--accent-strong);
+}
+
+.iq-event-card__label-text {
+  line-height: 1;
+}
+
+.iq-event-card__label-sep {
+  display: inline-block;
+  width: 1px;
+  height: 12px;
+  background: var(--accent-border);
+  border-radius: 1px;
+  opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .iq-event-card__meta {
@@ -620,7 +637,7 @@ input {
 }
 
 .iq-result__sections {
-  padding-top: 0;
+  padding-top: 10px;
 }
 
 .iq-research__meta {
@@ -778,6 +795,110 @@ details[open] .iq-section__chevron {
   line-height: 1.5;
   color: var(--text-soft);
   font-style: italic;
+}
+
+/* ─── Deep Down — inline header button ──────────────────────────────────────── */
+
+.iq-section__dd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* Show the button when hovering the whole section header */
+.iq-section__header:hover .iq-section__dd-btn,
+.iq-section__dd-btn--active,
+.iq-section__dd-btn:focus-visible {
+  opacity: 1;
+}
+
+.iq-section__dd-btn:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent-strong);
+}
+
+.iq-section__dd-btn--active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent-strong);
+}
+
+.iq-section__dd-btn--active:hover {
+  background: rgba(220, 93, 109, 0.12);
+  border-color: rgba(220, 93, 109, 0.30);
+  color: var(--danger);
+}
+
+.iq-section__dd-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.iq-section__dd-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--accent-border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: iq-spin 0.7s linear infinite;
+}
+
+/* ─── Deep Down — result body ────────────────────────────────────────────────── */
+
+.iq-section__dd-result {
+  margin-top: 8px;
+  padding: 10px 12px 10px 32px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-border);
+  background: var(--surface-accent);
+}
+
+/* ─── Deep Down — inline states ──────────────────────────────────────────────── */
+
+.iq-section__dd-loading {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-soft);
+  font-style: italic;
+}
+
+.iq-section__dd-error {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: var(--danger);
+  line-height: 1.4;
+}
+
+.iq-section__dd-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 1px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: iq-blink 0.9s step-start infinite;
+}
+
+@keyframes iq-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
 
 /* ─── Loading / Streaming ───────────────────────────────────────────────────── */

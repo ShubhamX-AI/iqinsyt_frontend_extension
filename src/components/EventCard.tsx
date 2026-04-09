@@ -24,7 +24,11 @@ export default function EventCard({
   return (
     <div className="iq-card iq-card--feature">
       <div className="iq-event-card__header">
-        <p className="iq-event-card__label">Selected event | <span className="iq-badge iq-badge--accent">{event.source}</span></p>
+        <p className="iq-event-card__label">
+          <span className="iq-event-card__label-text">Selected event</span>
+          <span className="iq-event-card__label-sep" aria-hidden="true" />
+          <span className="iq-badge iq-badge--accent">{event.source}</span>
+        </p>
         <div className="iq-event-card__meta">
           {/* {event.volume ? (
             <span className="iq-badge">Vol {event.volume}</span>

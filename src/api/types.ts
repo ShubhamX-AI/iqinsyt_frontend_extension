@@ -43,6 +43,12 @@ export interface ResearchProgressEvent {
   meta?: Record<string, unknown>;
 }
 
+export interface ResearchSectionDeltaEvent {
+  request_id: string;
+  section: keyof InsightSections;
+  delta: string;
+}
+
 export interface ResearchCompletedEvent {
   success: true;
   data: {
@@ -56,7 +62,7 @@ export interface ResearchCompletedEvent {
   timestamp: string;
 }
 
-export interface ResearchErrorEvent {
+export interface StreamErrorEvent {
   success: false;
   error: string;
   message: string;
@@ -64,6 +70,33 @@ export interface ResearchErrorEvent {
   request_id: string;
   timestamp: string;
 }
+
+export type ResearchErrorEvent = StreamErrorEvent;
+
+// ─── Deep Down ────────────────────────────────────────────────────────────────
+
+export interface DeepDownRequest {
+  sectionTitle: string;
+  sectionContent: string;
+}
+
+export interface DeepDownResponse {
+  request_id: string;
+  result: string;
+}
+
+export interface DeepDownStartedEvent {
+  request_id: string;
+  section: string;
+}
+
+export interface DeepDownDeltaEvent {
+  delta: string;
+}
+
+export type DeepDownCompletedEvent = DeepDownResponse;
+
+export type DeepDownErrorEvent = StreamErrorEvent;
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 

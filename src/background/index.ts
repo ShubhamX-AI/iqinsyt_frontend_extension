@@ -83,6 +83,9 @@ async function handleAnalysis(event: DetectedEvent, redo: boolean): Promise<void
       onProgress: (payload) => {
         chrome.runtime.sendMessage({ type: 'ANALYSIS_PROGRESS', payload }).catch(() => {});
       },
+      onSectionDelta: (payload) => {
+        chrome.runtime.sendMessage({ type: 'ANALYSIS_SECTION_DELTA', payload }).catch(() => {});
+      },
     });
 
     if (activeAnalysisAbort !== controller) return;

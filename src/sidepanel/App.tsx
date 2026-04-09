@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from 'react'
+import type { InsightSections } from '../api/types.ts'
 import { AppContext, useAppContext } from './context.tsx'
 import type { AppState, AppAction, DetectedEvent, DetectedMarket } from '../shared/types.ts'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -13,11 +14,24 @@ import StreamingStatus from '../components/StreamingStatus.tsx'
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 
+function createEmptyInsightSections(): InsightSections {
+  return {
+    eventSummary: '',
+    keyVariables: '',
+    historicalContext: '',
+    currentDrivers: '',
+    riskFactors: '',
+    dataConfidence: '',
+    dataGaps: '',
+  };
+}
+
 const emptyStreamState: AppState['stream'] = {
   requestId: null,
   stage: null,
   message: null,
   progress: [],
+  sections: createEmptyInsightSections(),
 };
 
 const initialState: AppState = {
@@ -119,6 +133,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
             stage: action.payload.stage,
             message: action.payload.message,
           }],
+          sections: createEmptyInsightSections(),
         },
       };
 
@@ -131,6 +146,21 @@ function appReducer(state: AppState, action: AppAction): AppState {
           stage: action.payload.stage,
           message: action.payload.message,
           progress: [...state.stream.progress, action.payload].slice(-40),
+          sections: state.stream.sections,
+        },
+      };
+
+    case 'ANALYSIS_SECTION_DELTA':
+      return {
+        ...state,
+        phase: 'streaming',
+        stream: {
+          ...state.stream,
+          requestId: action.payload.request_id,
+          sections: {
+            ...state.stream.sections,
+            [action.payload.section]: state.stream.sections[action.payload.section] + action.payload.delta,
+          },
         },
       };
 
@@ -143,10 +173,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
 
     case 'ANALYSIS_RESULT':
-      return { ...state, phase: 'result', result: action.payload, error: null };
+      return { ...state, phase: 'result', result: action.payload, error: null, stream: emptyStreamState };
 
     case 'SHOW_ERROR':
-      return { ...state, phase: 'error', error: action.payload };
+      return { ...state, phase: 'error', error: action.payload, stream: emptyStreamState };
 
     case 'DISMISS_ERROR':
       return {
@@ -283,13 +313,18 @@ function PanelContent() {
         )}
 
         {(phase === 'connecting' || phase === 'streaming') && (
-          <StreamingStatus
-            phase={phase}
-            stage={stream.stage}
-            message={stream.message}
-            progress={stream.progress}
-            onCancel={handleCancelAnalysis}
-          />
+          <>
+            <StreamingStatus
+              phase={phase}
+              stage={stream.stage}
+              message={stream.message}
+              progress={stream.progress}
+              onCancel={handleCancelAnalysis}
+            />
+            {phase === 'streaming' && (
+              <ResearchOutput sections={stream.sections} />
+            )}
+          </>
         )}
 
         {phase === 'result' && result && detectedEvent && (
